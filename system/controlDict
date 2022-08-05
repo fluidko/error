@@ -1,0 +1,65 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1812                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application     pimpleFoam;
+
+startFrom       latestTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         1000;
+
+deltaT          1e-5;
+
+writeControl    timeStep;
+
+// writeControl runTime;
+// ↑를 활성화시키면 매 timestep마다 기록한다.
+//
+// writeContorl adjustableRunTime
+// 내가 31초동안 simulation을 돌리려고 한다.
+// 그런데 timestep이 0.3초이다.
+// 그러면 마지막 30.9초에서 문제가 된다. 왜냐하면 30.9초 다음에는 31.2초이기 때문이다.
+// 이럴 때 ↑를 활성화시키면 timestep을 0.3에서 0.1로 조정시킴으로서
+// 31초 시뮬레이션을 수행하게 된다.
+
+writeInterval   50;
+// 50스텝마다 정보를 저장한다.
+
+purgeWrite      0;
+
+writeFormat     ascii;
+
+writePrecision  6;
+// 소숫점 아래 6번째까지 계산하겠다.
+
+
+writeCompression off;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable true;
+
+// adjustTimeStep yes;
+// maxCo 2;
+// 최대 Courant 수가 2가 되지 않도록, timestep을 iteration 동안 저절로 조정하겠다.
+
+// ************************************************************************* //

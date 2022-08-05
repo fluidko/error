@@ -1,0 +1,129 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2012                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    p
+    {
+        solver           PCG;
+	preconditioner	DIC;
+        tolerance        1e-6;
+        relTol           0.05;
+
+
+    }
+
+    pFinal
+    {
+        $p;
+        relTol          0;
+    }
+
+    "(U|k|epsilon|omega|R|nuTilda)"
+    {
+        solver          smoothSolver;
+        smoother        symGaussSeidel;
+        tolerance       1e-05;
+        relTol          0.1;
+    }
+
+    "(U|k|epsilon|omega|R|nuTilda)Final"
+    {
+        solver	smmothSolver;
+        smoother	symGaussSeidal;
+	tolerance	1e-05;
+	relTol	0;
+    }
+}
+
+PIMPLE
+// PISO처럼 nOuterCorrectors를 1번 nCorrectors를 2번과 같이 하면, 쿠랑 수가 1보다 작아야한다.(PISO의 수렴 조건)
+// 쿠랑 수가 3과 같이 커지면 계산이 터진다.
+//
+{
+	nOuterCorrectors	1000;
+	// Versteeg의 책 번역본에서 P.213의 그림 6.8의 PISO 알고리즘을 보면,
+	// 수렴이 안됬을 때 최종 루프를 몇 번 도냐는 것이 있다. 그것을 얘기하는 것이다.
+	// 이거 지워도 default가 1이라서, 1번으로 세팅이 된다.
+	nCorrectors	2;
+	// Versteeg의 책 번역본에서 P.211을 보면,
+	// 수정단계 1과 수정단계 2가 있다. 즉 해당 과정을 2번 반복한다는 것인데,
+	// 이것을 n으로 바꾸면, 해당 과정을 n번 반복하게 된다.
+	// 이거 지워도 default가 1이라서, 1번 반복으로 세팅이 된다.
+	// 이것이 1일 때보다 2일 때 더 수렴이 안정적으로 된다.
+	// https://openfoamwiki.net/index.php/OpenFOAM_guide/The_PIMPLE_algorithm_in_OpenFOAM
+	//
+	nNonOrthogonalCorrectors 2;
+	// 수정 단계 개수를 늘린다.
+	// 만약 nCorrectors가 2이고 nNonOrthogonalCorrectors가 3이면, 수정단계 2개 각각 안에 또 다른 수정단계 3개가 들어간다는 것이므로,
+	// 총 수정단계를 6번 돌게된다.
+	//
+	// * 그리고 여기에 nOuterCorrectors가 3이 되면, 6번 도는 것이 3번 도므로, 운동량 방정식은 3번, 압력 수정 방정식은 18번 풀게된다.
+	
+	residualControl
+	{
+		// U와 P 둘 다의 Residual이 다 만족되어야 iteration이 중단된다.
+
+		U
+		{
+			tolerance 1e-5;
+			// Absolute residual이 1e-5 밑으로 떨어지거나
+			relTol 0;
+			// Relative residual이 0 밑으로 떨어지면(일어날 일 없음)
+			// 설령 코딩된 횟수보다 iteration이 덜 진행됬다 할지라도 iteration을 멈춰라
+		}
+
+		p
+		{
+			tolerance 5e-4;
+			relTol 0;
+		}
+	}
+
+
+}
+
+relaxationFactors
+// residual은 필드 전체에 대한 것이다.
+{
+
+	fields
+	{
+		p	0.4;
+		// 압력장의 relaxation factor가 0.3이다
+		pFinal	1;
+		// 맨 마지막 iteration 때는 이미 많이 수렴했으므로,
+		// 설령 행렬이 대각지배행렬이 아닐지라도
+		// correction 항의 계수를 1로 두고,
+		// 이전 값을 반영하는 항의 계수는 1-a로 둔다.
+		// 즉 기존에 진행해오던
+		// 'v_2=a(0.5v_1+0.6v_3+1)+(1-a)v_2, previous'
+		// 에서
+		// 'v_2=(0.5v_1+0.6v_3+1)'
+		// 과 같이 된다.
+	}
+
+	equations
+	{
+		"(U|k|epsilon|omega|R|nuTilda)"     0.4;
+		// 속도장, 난류 운동 에너지장, 난류 소산장의 relaxation factor가 0.3
+		"(U|k|epsilon|omega|R|nuTilda)Final"   1;
+		// 마지막 
+	}
+
+}
+// ************************************************************************* //
